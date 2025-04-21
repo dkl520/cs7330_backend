@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import F, Q
 
 # Create your models here.
 class Social_media(models.Model):
@@ -13,17 +14,21 @@ class User(models.Model):
     user_id = models.AutoField(primary_key=True)
     media_id = models.ForeignKey(Social_media, on_delete=models.CASCADE, db_column='media_id')
     username = models.CharField(max_length=40)
-    first_name = models.CharField(max_length=50, null=True)
-    last_name = models.CharField(max_length=50, null=True)
-    country_of_birth = models.CharField(max_length=50, null=True)
-    country_of_residence = models.CharField(max_length=50, null=True)
-    age = models.IntegerField(null=True)
-    gender = models.CharField(max_length=20, null=True)
+    first_name = models.CharField(max_length=50, null=True, default=None)
+    last_name = models.CharField(max_length=50, null=True, default=None)
+    country_of_birth = models.CharField(max_length=50, null=True, default=None)
+    country_of_residence = models.CharField(max_length=50, null=True, default=None)
+    age = models.IntegerField(null=True, default=None)
+    gender = models.CharField(max_length=20, null=True, default=None)
     is_verified =models.BooleanField(default=False)
 
     class Meta:
         permissions = ()
         db_table = 'user'
+        constraints = [
+            models.UniqueConstraint(fields=['media_id', 'username'], 
+                                    name= 'unique_username_within_media')
+        ]
 
 class Post(models.Model):
     post_id = models.AutoField(primary_key=True)
@@ -31,9 +36,9 @@ class Post(models.Model):
     media_id = models.ForeignKey(Social_media, on_delete=models.CASCADE, db_column='media_id')
     content = models.TextField()
     post_time = models.DateTimeField()
-    location_city = models.CharField(max_length=50, null=True)
-    location_state = models.CharField(max_length=50, null=True)
-    location_country = models.CharField(max_length=50, null=True)
+    location_city = models.CharField(max_length=50, null=True, default=None)
+    location_state = models.CharField(max_length=50, null=True, default=None)
+    location_country = models.CharField(max_length=50, null=True, default=None)
     likes = models.IntegerField(default=0)
     dislikes = models.IntegerField(default=0)
     has_multimedia = models.BooleanField(default=False)
@@ -41,6 +46,10 @@ class Post(models.Model):
     class Meta:
         permissions = ()
         db_table = 'post'
+        constraints = [
+            models.UniqueConstraint(fields=['user_id', 'media_id', 'post_time'],
+                                    name= 'one_post_one_time_a_user_within_a_media')
+        ]
 
 class Repost(models.Model):
     repost_id = models.AutoField(primary_key=True)
@@ -72,6 +81,10 @@ class Project(models.Model):
     class Meta:
         permissions = ()
         db_table = 'project'
+        constraints = [
+            models.CheckConstraint(check=Q(start_date__lte = F('end_date')),
+                                   name='start_date_before_or_equal_end_date')
+        ]
 
 class Project_field(models.Model):
     field_id = models.AutoField(primary_key=True)
@@ -81,6 +94,10 @@ class Project_field(models.Model):
     class Meta:
         permissions = ()
         db_table = 'project_field'
+        constraints = [
+            models.UniqueConstraint(fields=['project_id', 'field_name'],
+                                    name='field_name_unique_within_project')
+        ]
 
 class Project_post(models.Model):
     project_post_id = models.AutoField(primary_key=True)
@@ -90,13 +107,21 @@ class Project_post(models.Model):
     class Meta:
         permissions = ()
         db_table = 'project_post'
+        constraints = [
+            models.UniqueConstraint(fields=['project_id', 'post_id'],
+                                    name='over_analysis')
+        ]
 
 class Analysis_result(models.Model):
     result_id = models.AutoField(primary_key=True)
     project_post_id = models.ForeignKey(Project_post, on_delete=models.CASCADE, db_column='project_post_id')
     field_id = models.ForeignKey(Project_field, on_delete=models.CASCADE, db_column='field_id')
-    value = models.CharField(max_length=255)
+    value = models.CharField(max_length=255, null=True, default=None)
 
     class Meta:
         permissions = ()
         db_table = 'analysis_result'
+        constraints = [
+            models.UniqueConstraint(fields=['project_post_id', 'field_id'],
+                                    name='one_result_for_one_post_with_a_field_within_a_project')
+        ]
