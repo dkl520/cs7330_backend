@@ -11,7 +11,7 @@ The backend here only have query functions, and the frontend here just is a simp
      'experiments': experiments,
    }
 
-   2. experiment query
+2.experiment query
       expected "GET" request: "GET /api/query/experiment/?name= {name}
 
       date response:
