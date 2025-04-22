@@ -166,7 +166,7 @@ def social_media_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
 
 
 #user ---------------------------------
@@ -233,7 +233,7 @@ def user_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
 
 
 #post-----------------------------------------------------
@@ -301,7 +301,7 @@ def post_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
 
 
 
@@ -370,7 +370,7 @@ def repost_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
 
 # def project_field_list_view(request):
 #     # dictionary for initial data with 
@@ -450,7 +450,7 @@ def institute_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
 
 
 
@@ -518,7 +518,7 @@ def project_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
 
 
 #project field--------------------------------------------------
@@ -586,7 +586,7 @@ def project_field_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
 
 
 
@@ -655,7 +655,7 @@ def project_post_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
 
 #analysis------------------------------------------------
 def analysis_result_create_view(request):
@@ -722,4 +722,4 @@ def analysis_result_delete_view(request, id):
         # home page
         return HttpResponseRedirect("/")
 
-    return render(request, "delete_view.html", context)
+    return render(request, "delete.html", context)
