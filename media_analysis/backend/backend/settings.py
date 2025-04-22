@@ -75,7 +75,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+#'PASSWORD': 'pw5330',
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',

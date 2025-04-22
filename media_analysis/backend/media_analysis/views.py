@@ -2,8 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Value, Q
 from django.db.models.functions import Concat
-from .models import Post, Project_post
+from .models import *#Post, Project_post, Social_media
+from .forms import Social_media_Form, User_Form, Post_Form, Repost_Form, Institute_Form, Project_Form, Project_field_Form,Project_post_Form,Analysis_result_Form
 from datetime import datetime
+from django.shortcuts import (get_object_or_404,
+                              render, 
+                              HttpResponseRedirect)
+
 
 # Post query
 class PostView(APIView):
@@ -92,3 +97,629 @@ class ExperimentView(APIView):
             'percentages': percentages,
         }
         return Response(result)
+    
+
+#--------
+#social media crud
+
+def social_media_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = Social_media_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+def social_media_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = Social_media.objects.all()
+        
+    return render(request, "list.html", context)
+
+
+
+def social_media_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Social_media, media_id = id)
+
+    # pass the object as instance in form
+    form = Social_media_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def social_media_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Social_media, media_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)
+
+
+#user ---------------------------------
+def user_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = User_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+def user_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = User.objects.all()
+        
+    return render(request, "list.html", context)
+
+
+def user_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(User, user_id = id)
+
+    # pass the object as instance in form
+    form = User_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def user_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(User, user_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)
+
+
+#post-----------------------------------------------------
+def post_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = Post_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+def post_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = Post.objects.all()
+        
+    return render(request, "list.html", context)
+
+
+
+def post_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Post, post_id = id)
+
+    # pass the object as instance in form
+    form = Post_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def post_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Post, post_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)
+
+
+
+#repost-----------------------------------------------
+def repost_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = Repost_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+def repost_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = Repost.objects.all()
+        
+    return render(request, "list.html", context)
+
+
+
+def repost_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Repost, repost_id = id)
+
+    # pass the object as instance in form
+    form = Repost_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def repost_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Repost, repost_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)
+
+# def project_field_list_view(request):
+#     # dictionary for initial data with 
+#     # field names as keys
+#     context ={}
+
+#     # add the dictionary during initialization
+#     context["dataset"] = Repost.objects.all()
+        
+#     return render(request, "list.html", context)
+
+
+
+
+
+#institute crud--------------------------------------
+def institute_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = Institute_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+def institute_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = Institute.objects.all()
+        
+    return render(request, "list.html", context)
+
+
+def institute_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Institute, institute_id = id)
+
+    # pass the object as instance in form
+    form = Institute_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def institute_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Institute, institute_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)
+
+
+
+#project form ----------------------------------------
+def project_form_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = Project_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+def project_form_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = Project_Form.objects.all()
+        
+    return render(request, "list.html", context)
+
+
+def project_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Project, project_id = id)
+
+    # pass the object as instance in form
+    form = Project_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def project_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Project, project_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)
+
+
+#project field--------------------------------------------------
+def project_field_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = Project_field_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+def project_field_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = Project_field.objects.all()
+        
+    return render(request, "list.html", context)
+
+
+
+def project_field_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Project_field, field_id = id)
+
+    # pass the object as instance in form
+    form = Project_field_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def project_field_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Project_field, field_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)
+
+
+
+
+#project Post-------------------------------------
+def project_post_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = Project_post_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+def project_post_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = Project_post.objects.all()
+        
+    return render(request, "list.html", context)
+
+
+def project_post_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Project_post, project_post_id = id)
+
+    # pass the object as instance in form
+    form = Project_post_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def project_post_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Project_post, project_post_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)
+
+#analysis------------------------------------------------
+def analysis_result_create_view(request):
+    # dictionary for initial data with
+    # field names as keys
+    context = {}
+
+    # add the dictionary during initialization
+    form = Analysis_result_Form(request.POST or None)
+    if form.is_valid():
+        form.save()
+
+    context['form'] = form
+    return render(request, "create_view.html", context)
+
+
+
+def analysis_result_list_view(request):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # add the dictionary during initialization
+    context["dataset"] = Analysis_result.objects.all()
+        
+    return render(request, "list.html", context)
+
+def analysis_result_update_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Analysis_result, result_id = id)
+
+    # pass the object as instance in form
+    form = Analysis_result_Form(request.POST or None, instance = obj)
+
+    # save the data from the form and
+    # redirect to detail_view
+    if form.is_valid():
+        form.save()
+        return HttpResponseRedirect("/"+id)
+
+    # add form dictionary to context
+    context["form"] = form
+
+    return render(request, "update.html", context)
+
+
+def analysis_result_delete_view(request, id):
+    # dictionary for initial data with 
+    # field names as keys
+    context ={}
+
+    # fetch the object related to passed id
+    obj = get_object_or_404(Analysis_result, result_id = id)
+
+
+    if request.method =="POST":
+        # delete object
+        obj.delete()
+        # after deleting redirect to 
+        # home page
+        return HttpResponseRedirect("/")
+
+    return render(request, "delete_view.html", context)

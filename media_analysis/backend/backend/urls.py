@@ -16,10 +16,56 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from media_analysis.views import PostView, ExperimentView
+from media_analysis.views import *#PostView, ExperimentView, social_media_create_view, user_create_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/query/post/', PostView.as_view()),
     path('api/query/experiment/', ExperimentView.as_view()),
+
+    path('api/query/media/create/', social_media_create_view),
+    path('api/query/User/create/', user_create_view),
+    path('api/query/Post/create/', post_create_view),
+    path('api/query/repost/create/', repost_create_view),
+    path('api/query/institute/create/', institute_create_view),
+    path('api/query/Project/create/', project_form_create_view),
+    path('api/query/ProjectField/create/', project_field_create_view),
+    path('api/query/ProjectPost/create/', project_post_create_view),
+    path('api/query/AnalysisResult/create/', analysis_result_create_view),
+
+
+     path('api/query/media/list/', social_media_list_view),
+    path('api/query/User/list/', user_list_view),
+    path('api/query/Post/list/', post_list_view),
+    path('api/query/repost/list/', repost_list_view),
+    path('api/query/institute/list/', institute_list_view),
+    path('api/query/Project/list/', project_form_list_view),
+    path('api/query/ProjectField/list/', project_field_list_view),
+    path('api/query/ProjectPost/list/', project_post_list_view),
+    path('api/query/AnalysisResult/list/', analysis_result_list_view),
+    
+
+    path('media/<id>/update', social_media_update_view ),
+    path('User/<id>/update', user_update_view ),
+    path('Post/<id>/update', post_update_view ),
+    path('repost/<id>/update', repost_update_view ),
+    path('institute/<id>/update', institute_update_view ),
+    path('Project/<id>/update', project_update_view ),
+    path('ProjectField/<id>/update', project_field_update_view ),
+    path('ProjectPost/<id>/update', project_post_update_view ),
+    path('AnalysisResult/<id>/update', analysis_result_update_view ),
+
+
+
+
+    path('media/<id>/delete', social_media_delete_view ),
+    path('User/<id>/delete', user_delete_view ),
+    path('Post/<id>/delete', post_delete_view ),
+    path('repost/<id>/delete', repost_delete_view ),
+    path('institute/<id>/delete', institute_delete_view ),
+    path('Project/<id>/delete', project_delete_view ),
+    path('ProjectField/<id>/delete', project_field_delete_view ),
+    path('ProjectPost/<id>/delete', project_post_delete_view ),
+    path('AnalysisResult/<id>/delete', analysis_result_delete_view ),
+
 ]
