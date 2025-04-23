@@ -99,6 +99,11 @@ urlpatterns = [
     path('api/project/create', create_project, name='create_project'),
     path('api/project/<int:pk>', project_detail, name='project_detail'),
 
+
+    path('api/project_field', get_project_field, name='get_project_field'),
+    path('api/project_field/create', create_project_field, name='create_project_field'),
+    path('api/project_field/<int:pk>', project_field_detail, name='project_field_detail'), 
+
     path('api/project_post', get_project_post, name='get_project_post'),
     path('api/project_post/create', create_project_post, name='create_project_post'),
     path('api/project_post/<int:pk>', project_post_detail, name='project_post_detail'),
