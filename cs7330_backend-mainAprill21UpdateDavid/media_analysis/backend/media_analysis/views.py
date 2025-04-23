@@ -6,11 +6,12 @@ from .serializer import *
 
 from django.db.models import Value, Q
 from django.db.models.functions import Concat
-from .models import *#Post, Project_post, Social_media
-from .forms import Social_media_Form, User_Form, Post_Form, Repost_Form, Institute_Form, Project_Form, Project_field_Form,Project_post_Form,Analysis_result_Form
+from .models import *  # Post, Project_post, Social_media
+from .forms import Social_media_Form, User_Form, Post_Form, Repost_Form, Institute_Form, Project_Form, \
+    Project_field_Form, Project_post_Form, Analysis_result_Form
 from datetime import datetime
 from django.shortcuts import (get_object_or_404,
-                              render, 
+                              render,
                               HttpResponseRedirect)
 
 
@@ -26,21 +27,21 @@ class PostView(APIView):
         posts = Post.objects.select_related('user_id', 'media_id').prefetch_related('project_post_set__project_id')
         # query by media name
         if media:
-            posts = posts.filter(media_id__name = media)
+            posts = posts.filter(media_id__name=media)
         # query by timme slot
         if start_date and end_date:
             start_date = datetime.strptime(start_date, "%m/%d/%Y").date()
             end_date = datetime.strptime(end_date, "%m/%d/%Y").date()
-            posts = posts.filter(post_time__range = [start_date, end_date])
+            posts = posts.filter(post_time__range=[start_date, end_date])
         # query by username
         if username:
-            posts = posts.filter(user_id__username = username)
+            posts = posts.filter(user_id__username=username)
         # query by author's first name, last name, or full name
         if author:
-            posts = posts.annotate(fullname = Concat('user_id__first_name', Value(' '), 'user_id__last_name')).filter(
-                Q(user_id__first_name__icontains = author) |
-                Q(user_id__last_name__icontains = author) |
-                Q(fullname__icontains = author)
+            posts = posts.annotate(fullname=Concat('user_id__first_name', Value(' '), 'user_id__last_name')).filter(
+                Q(user_id__first_name__icontains=author) |
+                Q(user_id__last_name__icontains=author) |
+                Q(fullname__icontains=author)
             )
 
         result = []
@@ -54,17 +55,19 @@ class PostView(APIView):
                 'experiments': tuple(experiments),
             })
         return Response(result)
-    
+
+
 # experiment query
 class ExperimentView(APIView):
     def get(self, request):
         name = request.GET.get('name')
 
-        posts = Project_post.objects.select_related('post_id', 'project_id').prefetch_related('analysis_result_set__field_id')
-        #query by project name
+        posts = Project_post.objects.select_related('post_id', 'project_id').prefetch_related(
+            'analysis_result_set__field_id')
+        # query by project name
         if name:
-            posts = posts.filter(project_id__name = name)
-      
+            posts = posts.filter(project_id__name=name)
+
         post_result = []
         field_result = []
 
@@ -73,7 +76,7 @@ class ExperimentView(APIView):
             field = [a.field_id.field_name for a in post.analysis_result_set.all()]
             field_result += field
             post_result.append({
-                'post_id':post.post_id.post_id,
+                'post_id': post.post_id.post_id,
                 'username': post.post_id.user_id.username,
                 'media': post.post_id.media_id.name,
                 'content': post.post_id.content,
@@ -81,11 +84,11 @@ class ExperimentView(APIView):
                 'city': post.post_id.location_city,
                 'state': post.post_id.location_state,
                 'country': post.post_id.location_country,
-                'likes': post.post_id.likes, 
+                'likes': post.post_id.likes,
                 'dislikes': post.post_id.dislikes,
                 'has_multimedia': post.post_id.has_multimedia,
                 'field': field,
-                'value': value, 
+                'value': value,
 
             })
 
@@ -101,7 +104,7 @@ class ExperimentView(APIView):
             'percentages': percentages,
         }
         return Response(result)
-    
+
 
 # #--------
 # #social media crud
@@ -126,9 +129,8 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = Social_media.objects.all()
-        
-#     return render(request, "list.html", context)
 
+#     return render(request, "list.html", context)
 
 
 # def social_media_update_view(request, id):
@@ -194,7 +196,7 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = User.objects.all()
-        
+
 #     return render(request, "list.html", context)
 
 
@@ -261,9 +263,8 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = Post.objects.all()
-        
-#     return render(request, "list.html", context)
 
+#     return render(request, "list.html", context)
 
 
 # def post_update_view(request, id):
@@ -308,7 +309,6 @@ class ExperimentView(APIView):
 #     return render(request, "delete.html", context)
 
 
-
 # #repost-----------------------------------------------
 # def repost_create_view(request):
 #     # dictionary for initial data with
@@ -330,9 +330,8 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = Repost.objects.all()
-        
-#     return render(request, "list.html", context)
 
+#     return render(request, "list.html", context)
 
 
 # def repost_update_view(request, id):
@@ -383,11 +382,8 @@ class ExperimentView(APIView):
 
 # #     # add the dictionary during initialization
 # #     context["dataset"] = Repost.objects.all()
-        
+
 # #     return render(request, "list.html", context)
-
-
-
 
 
 # #institute crud--------------------------------------
@@ -411,7 +407,7 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = Institute.objects.all()
-        
+
 #     return render(request, "list.html", context)
 
 
@@ -457,7 +453,6 @@ class ExperimentView(APIView):
 #     return render(request, "delete.html", context)
 
 
-
 # #project form ----------------------------------------
 # def project_form_create_view(request):
 #     # dictionary for initial data with
@@ -479,7 +474,7 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = Project_Form.objects.all()
-        
+
 #     return render(request, "list.html", context)
 
 
@@ -546,9 +541,8 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = Project_field.objects.all()
-        
-#     return render(request, "list.html", context)
 
+#     return render(request, "list.html", context)
 
 
 # def project_field_update_view(request, id):
@@ -593,8 +587,6 @@ class ExperimentView(APIView):
 #     return render(request, "delete.html", context)
 
 
-
-
 # #project Post-------------------------------------
 # def project_post_create_view(request):
 #     # dictionary for initial data with
@@ -616,7 +608,7 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = Project_post.objects.all()
-        
+
 #     return render(request, "list.html", context)
 
 
@@ -676,7 +668,6 @@ class ExperimentView(APIView):
 #     return render(request, "create_view.html", context)
 
 
-
 # def analysis_result_list_view(request):
 #     # dictionary for initial data with 
 #     # field names as keys
@@ -684,7 +675,7 @@ class ExperimentView(APIView):
 
 #     # add the dictionary during initialization
 #     context["dataset"] = Analysis_result.objects.all()
-        
+
 #     return render(request, "list.html", context)
 
 # def analysis_result_update_view(request, id):
@@ -729,8 +720,8 @@ class ExperimentView(APIView):
 #     return render(request, "delete.html", context)
 
 
-#api calls
-#TODO Warning get all commands are for debugging. Very dangerous for data leak reasons
+# api calls
+# TODO Warning get all commands are for debugging. Very dangerous for data leak reasons
 
 # class social_media_serializer(serializers.ModelSerializer):
 #     class Meta:
@@ -738,10 +729,11 @@ class ExperimentView(APIView):
 #         fields = '__all__'
 @api_view(['GET'])
 def get_social_media(request):
-    #test response
+    # test response
     selected = Social_media.objects.all()
-    serializer = social_media_serializer(selected, many =True)
+    serializer = social_media_serializer(selected, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_social_media(request):
@@ -749,7 +741,7 @@ def create_social_media(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -769,13 +761,10 @@ def social_media_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-
 
 
 # class user_serializer(serializers.ModelSerializer):
@@ -786,10 +775,11 @@ def social_media_detail(request, pk):
 
 @api_view(['GET'])
 def get_user(request):
-    #test response
+    # test response
     selected = User.objects.all()
-    serializer = user_serializer(selected, many =True)
+    serializer = user_serializer(selected, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_user(request):
@@ -797,10 +787,9 @@ def create_user(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
@@ -818,11 +807,10 @@ def user_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 
 # class post_serializer(serializers.ModelSerializer):
@@ -833,10 +821,18 @@ def user_detail(request, pk):
 
 @api_view(['GET'])
 def get_post(request):
-    #test response
-    selected = Post.objects.all()
-    serializer = post_serializer(selected, many =True)
+    user_id = request.query_params.get('user_id')
+    media_id = request.query_params.get('media_id')
+    # 构建查询集
+    qs = Post.objects.all()
+    if user_id is not None:
+        qs = qs.filter(user_id=user_id)
+    if media_id is not None:
+        qs = qs.filter(media_id=media_id)
+
+    serializer = post_serializer(qs, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_post(request):
@@ -844,9 +840,10 @@ def create_post(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def post_detail(request, pk):
@@ -863,11 +860,10 @@ def post_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 
 # class repost_serializer(serializers.ModelSerializer):
@@ -878,10 +874,11 @@ def post_detail(request, pk):
 
 @api_view(['GET'])
 def get_repost(request):
-    #test response
+    # test response
     selected = Repost.objects.all()
-    serializer = repost_serializer(selected, many =True)
+    serializer = repost_serializer(selected, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_repost(request):
@@ -889,7 +886,7 @@ def create_repost(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -909,7 +906,7 @@ def repost_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -923,10 +920,11 @@ def repost_detail(request, pk):
 
 @api_view(['GET'])
 def get_institute(request):
-    #test response
+    # test response
     selected = Institute.objects.all()
-    serializer = institute_serializer(selected, many =True)
+    serializer = institute_serializer(selected, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_institute(request):
@@ -934,10 +932,9 @@ def create_institute(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
@@ -955,7 +952,7 @@ def institute_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -967,12 +964,26 @@ def institute_detail(request, pk):
 #         fields = '__all__'
 
 
+# @api_view(['GET'])
+# def get_project(request):
+#     #test response
+#     selected = Project.objects.all()
+#     serializer = project_serializer(selected, many =True)
+#     return Response(serializer.data)
+
 @api_view(['GET'])
 def get_project(request):
-    #test response
-    selected = Project.objects.all()
-    serializer = project_serializer(selected, many =True)
+    """
+    如果 URL 中带 ?id=123，就过滤 owner_id=123；否则返回所有项目。
+    """
+    institute_id = request.query_params.get('institute_id')
+    if institute_id is not None:
+        qs = Project.objects.filter(institute_id=institute_id)
+    else:
+        qs = Project.objects.all()
+    serializer = project_serializer(qs, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_project(request):
@@ -980,7 +991,7 @@ def create_project(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1000,7 +1011,7 @@ def project_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1013,10 +1024,11 @@ def project_detail(request, pk):
 
 @api_view(['GET'])
 def get_project_field(request):
-    #test response
+    # test response
     selected = Project_field.objects.all()
-    serializer = project_field_serializer(selected, many =True)
+    serializer = project_field_serializer(selected, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_project_field(request):
@@ -1024,7 +1036,7 @@ def create_project_field(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1044,7 +1056,7 @@ def project_field_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1058,10 +1070,11 @@ def project_field_detail(request, pk):
 
 @api_view(['GET'])
 def get_project_post(request):
-    #test response
+    # test response
     selected = Project_post.objects.all()
-    serializer = project_post_serializer(selected, many =True)
+    serializer = project_post_serializer(selected, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_project_post(request):
@@ -1069,7 +1082,7 @@ def create_project_post(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1089,7 +1102,7 @@ def project_post_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1103,10 +1116,11 @@ def project_post_detail(request, pk):
 
 @api_view(['GET'])
 def get_analysis_result(request):
-    #test response
+    # test response
     selected = Analysis_result.objects.all()
-    serializer = analysis_result_serializer(selected, many =True)
+    serializer = analysis_result_serializer(selected, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 def create_analysis_result(request):
@@ -1114,7 +1128,7 @@ def create_analysis_result(request):
     if serializer.is_valid():
         serializer.save()
 
-    #test response
+        # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1134,7 +1148,7 @@ def analysis_result_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         selected.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
