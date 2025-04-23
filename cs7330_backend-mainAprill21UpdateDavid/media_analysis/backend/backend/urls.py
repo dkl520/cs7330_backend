@@ -90,7 +90,7 @@ urlpatterns = [
     path('api/institute/create', create_institute, name='create_institute'),
     path('api/institute/<int:pk>', institute_detail, name='institute_detail'),
 
-    path('api/project', get_institute, name='get_institute'),
+    path('api/project', get_project, name='get_project'),
     path('api/project/create', create_project, name='create_project'),
     path('api/project/<int:pk>', project_detail, name='project_detail'),
 
