@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -834,6 +836,46 @@ def get_post(request):
     return Response(serializer.data)
 
 
+
+@api_view(["GET"])
+def get_available_posts(request):
+    """
+    Query params
+    ------------
+    user_id   : int  – current user
+    media_id  : int  – social-media source to filter on
+    Returns all posts from `media_id` that:
+      • are NOT authored by `user_id`
+      • have NOT yet been reposted by `user_id`
+    """
+    user_id = request.query_params.get("user_id")
+    media_id = request.query_params.get("media_id")
+
+    if user_id is None or media_id is None:
+        return Response(
+            {"detail": "Both user_id and media_id are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    # 1. posts in this media, excluding the user’s own posts
+    posts_qs = (
+        Post.objects
+        .filter(media_id=media_id)
+        .exclude(user_id=user_id)
+    )
+    # 2. collect IDs the user has already reposted
+    reposted_ids = (
+        Repost.objects
+        .filter(user_id=user_id)
+        .values_list("post_id", flat=True)
+    )
+
+    # 3. exclude those already-reposted IDs
+    posts_qs = posts_qs.exclude(post_id__in=reposted_ids)
+
+    serializer = post_serializer(posts_qs, many=True)
+    return Response(serializer.data)
+
+
 @api_view(['POST'])
 def create_post(request):
     serializer = post_serializer(data=request.data)
@@ -875,8 +917,12 @@ def post_detail(request, pk):
 @api_view(['GET'])
 def get_repost(request):
     # test response
-    selected = Repost.objects.all()
-    serializer = repost_serializer(selected, many=True)
+    user_id = request.query_params.get('user_id')
+    if user_id is not None:
+        qs = Repost.objects.filter(user_id=user_id)
+    else:
+        qs = Repost.objects.all()
+    serializer = repost_serializer(qs, many=True)
     return Response(serializer.data)
 
 
@@ -889,6 +935,26 @@ def create_repost(request):
         # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+def bulk_repost(request):
+    user_id = request.data.get("user_id")
+    post_ids = request.data.get("post_ids", [])
+    if not user_id or not isinstance(post_ids, list):
+        return Response(
+            {"detail": "user_id 和 post_ids (list) 均不能为空"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    # 如果你的字段名就是 post_id = ForeignKey(Post
+    now = timezone.now()
+    repost_objs = [
+        Repost(user_id_id=user_id, post_id_id=pid, repost_time=now)  # 两个 _id
+        for pid in post_ids
+    ]
+    with transaction.atomic():
+        Repost.objects.bulk_create(repost_objs, ignore_conflicts=True)
+    return Response({"attempted": post_ids}, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])

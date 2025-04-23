@@ -79,11 +79,16 @@ urlpatterns = [
 
 
     path('api/post', get_post, name='get_post'),
+
+    path('api/get_available_posts', get_available_posts, name='get_available_posts'),
     path('api/post/create', create_post, name='create_post'),
     path('api/post/<int:pk>', post_detail, name='post_detail'),
 
+
+
     path('api/repost', get_repost, name='get_repost'),
     path('api/repost/create', create_repost, name='create_repost'),
+    path('api/repost/bulk_repost', bulk_repost, name='bulk_repost'),
     path('api/repost/<int:pk>', repost_detail, name='repost_detail'),
 
     path('api/institute', get_institute, name='get_institute'),
