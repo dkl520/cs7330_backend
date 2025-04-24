@@ -79,7 +79,7 @@ urlpatterns = [
 
 
     path('api/post', get_post, name='get_post'),
-
+    path('api/post_batch', get_post_batch, name='post_batch'),
     path('api/get_available_posts', get_available_posts, name='get_available_posts'),
     path('api/post/create', create_post, name='create_post'),
     path('api/post/<int:pk>', post_detail, name='post_detail'),
@@ -106,11 +106,16 @@ urlpatterns = [
 
     path('api/project_post', get_project_post, name='get_project_post'),
     path('api/project_post/create', create_project_post, name='create_project_post'),
+    path('api/project_post/bulk_project_post', bulk_project_post, name='bulk_project_post'),
     path('api/project_post/<int:pk>', project_post_detail, name='project_post_detail'),
+    path('api/project_post/listall', project_post_all, name='project_post_all'),
 
 
     path('api/analysis_result', get_analysis_result, name='get_anaysis_result'),
     path('api/analysis_result/create', create_analysis_result, name='create_analysis_result'),
     path('api/analysis_result/<int:pk>', analysis_result_detail, name='analysis_result_detail'),
+
+
+
 
 ]

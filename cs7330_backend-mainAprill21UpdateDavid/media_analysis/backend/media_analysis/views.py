@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializer import *
 
-from django.db.models import Value, Q
+from django.db.models import Value, Q, Prefetch
 from django.db.models.functions import Concat
 from .models import *  # Post, Project_post, Social_media
 from .forms import Social_media_Form, User_Form, Post_Form, Repost_Form, Institute_Form, Project_Form, \
@@ -15,6 +15,7 @@ from datetime import datetime
 from django.shortcuts import (get_object_or_404,
                               render,
                               HttpResponseRedirect)
+import json
 
 
 # Post query
@@ -836,6 +837,32 @@ def get_post(request):
     return Response(serializer.data)
 
 
+# @api_view(['GET'])
+# def get_post_batch(request):
+#     ids = request.query_params.getlist('post_ids')  # ['1','2','3']
+#     qs  = Post.objects.filter(id__in=ids) if ids else Post.objects.none()
+#     serializer = post_serializer(qs, many=True)
+#     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_post_batch(request):
+    # 1️⃣ 取出 ID 列表：/post_batch?post_ids=1&post_ids=2…
+    ids = request.query_params.getlist('post_ids')  # ['1', '2', '3']
+    # 2️⃣ 解析“是否取反”开关：/post_batch?in=false  (默认 true)
+    # 把传进来的字符串统一转小写，便于比较
+    in_raw = request.query_params.get('in', 'true').lower()
+    # 只要不是 “false/0/no” 之一，就当作 True
+    include_flag = in_raw not in ('false', '0', 'no')
+    # 3️⃣ 根据开关拼接查询集
+    if include_flag:  # in=true → 只要这些 ID
+        qs = Post.objects.filter(id__in=ids)
+    else:  # in=false → 排除这些 ID
+        qs = Post.objects.exclude(id__in=ids)
+    # 4️⃣ 序列化并返回
+    serializer = post_serializer(qs, many=True)
+    return Response(serializer.data)
+
 
 @api_view(["GET"])
 def get_available_posts(request):
@@ -1091,8 +1118,12 @@ def project_detail(request, pk):
 @api_view(['GET'])
 def get_project_field(request):
     # test response
-    selected = Project_field.objects.all()
-    serializer = project_field_serializer(selected, many=True)
+    project_id = request.query_params.get('project_id')
+    if project_id is not None:
+        qs = Project_field.objects.filter(project_id=project_id)
+    else:
+        qs = Project_field.objects.all()
+    serializer = project_field_serializer(qs, many=True)
     return Response(serializer.data)
 
 
@@ -1137,8 +1168,12 @@ def project_field_detail(request, pk):
 @api_view(['GET'])
 def get_project_post(request):
     # test response
-    selected = Project_post.objects.all()
-    serializer = project_post_serializer(selected, many=True)
+    project_id = request.query_params.get('project_id')
+    if project_id is not None:
+        qs = Project_post.objects.filter(project_id=project_id)
+    else:
+        qs = Project_post.objects.all()
+    serializer = project_post_serializer(qs, many=True)
     return Response(serializer.data)
 
 
@@ -1151,6 +1186,24 @@ def create_project_post(request):
         # test response
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def bulk_project_post(request):
+    project_id = request.data.get("project_id")
+    post_ids = request.data.get("post_ids", [])
+    if not project_id or not isinstance(post_ids, list):
+        return Response(
+            {"detail": "project_id 和 post_ids (list) 均不能为空"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    project_post_objs = [
+        Project_post(project_id_id=project_id, post_id_id=pid)  # 两个 _id
+        for pid in post_ids
+    ]
+    with transaction.atomic():
+        Project_post.objects.bulk_create(project_post_objs, ignore_conflicts=True)
+    return Response({"attempted": post_ids}, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
@@ -1174,6 +1227,32 @@ def project_post_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@api_view(['GET'])
+def project_post_all(request):
+    """
+    GET /api/project_post/listall?project_id=42
+    Returns every column in PROJECT_POST + its POST + its ANALYSIS_RESULTs.
+    Rows with no analysis_result still appear (LEFT JOIN semantics).
+    """
+    project_id = request.query_params.get('project_id')
+    if not project_id:
+        return Response({"detail": "project_id is required"}, status=400)
+    # ProjectPost <-FK-> Post (one)  +  ProjectPost <-FK-> AnalysisResult (many)
+    qs = (
+        Project_post.objects
+        .filter(project_id=project_id)
+        .select_related('post_id')  # ← 外键字段名本来就叫 post_id
+        .prefetch_related(  # ← 没写 related_name，用默认 *_set
+            Prefetch(
+                'analysis_result_set',  # 默认反向名
+                queryset=Analysis_result.objects.select_related('field_id')
+            )
+        )
+    )
+    data = project_post_serializer(qs, many=True).data
+    return Response(data)
+
+
 # class analysis_result_serializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = Analysis_result
@@ -1183,8 +1262,12 @@ def project_post_detail(request, pk):
 @api_view(['GET'])
 def get_analysis_result(request):
     # test response
-    selected = Analysis_result.objects.all()
-    serializer = analysis_result_serializer(selected, many=True)
+    project_post_id = request.query_params.get('project_post_id')
+    if project_post_id is not None:
+        qs = Analysis_result.objects.filter(project_post_id=project_post_id)
+    else:
+        qs = Analysis_result.objects.all()
+    serializer = analysis_result_serializer(qs, many=True)
     return Response(serializer.data)
 
 
