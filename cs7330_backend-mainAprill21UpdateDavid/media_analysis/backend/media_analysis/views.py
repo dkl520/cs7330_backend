@@ -1240,8 +1240,8 @@ def project_post_all(request):
     # ProjectPost <-FK-> Post (one)  +  ProjectPost <-FK-> AnalysisResult (many)
     qs = (
         Project_post.objects
-        .filter(project_id=project_id)
-        .select_related('post_id')  # ← 外键字段名本来就叫 post_id
+        .filter(project_id__project_id=project_id)
+        .select_related('post_id','project_id')  # ← 外键字段名本来就叫 post_id
         .prefetch_related(  # ← 没写 related_name，用默认 *_set
             Prefetch(
                 'analysis_result_set',  # 默认反向名
@@ -1249,8 +1249,30 @@ def project_post_all(request):
             )
         )
     )
-    data = project_post_serializer(qs, many=True).data
-    return Response(data)
+    post_result = []
+    for post in qs:
+        value = [a.value for a in post.analysis_result_set.all()]
+        field = [a.field_id.field_name for a in post.analysis_result_set.all()]
+        field_id = [a.field_id.field_id for a in post.analysis_result_set.all()]
+      
+        post_result.append({
+            'project_post_id':post.project_post_id,
+            'project_id':post.project_id.project_id,
+            'post_id':post.post_id.post_id,
+            'content': post.post_id.content,
+            'user_id':post.post_id.user_id.user_id,
+            'media_id':post.post_id.media_id.media_id,
+            'post_time': post.post_id.post_time.strftime("%Y-%m-%d %H:%M:%S"),
+            'location_city': post.post_id.location_city,
+            'location_state': post.post_id.location_state,
+            'location_country': post.post_id.location_country,
+            'likes': post.post_id.likes, 
+            'dislikes': post.post_id.dislikes,
+            'has_multimedia': post.post_id.has_multimedia,
+            'analysis':[{'fieldid':i, 'fieldnamme':n, 'fieldvalue':v} 
+                        for i,n,v in zip(field_id, field, value)]
+            })
+    return Response(post_result)
 
 
 # class analysis_result_serializer(serializers.ModelSerializer):
