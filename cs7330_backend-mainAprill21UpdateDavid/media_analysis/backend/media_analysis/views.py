@@ -1269,7 +1269,7 @@ def project_post_all(request):
             'likes': post.post_id.likes, 
             'dislikes': post.post_id.dislikes,
             'has_multimedia': post.post_id.has_multimedia,
-            'analysis':[{'fieldid':i, 'fieldnamme':n, 'fieldvalue':v} 
+            'analysis':[{'field_id':i, 'field_name':n, 'value':v}
                         for i,n,v in zip(field_id, field, value)]
             })
     return Response(post_result)
