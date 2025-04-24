@@ -109,7 +109,7 @@ urlpatterns = [
     path('api/project_post/bulk_project_post', bulk_project_post, name='bulk_project_post'),
     path('api/project_post/<int:pk>', project_post_detail, name='project_post_detail'),
     path('api/project_post/listall', project_post_all, name='project_post_all'),
-
+    path('api/project_post/remains', project_post_remains, name='project_post_remains'),
 
     path('api/analysis_result', get_analysis_result, name='get_anaysis_result'),
     path('api/analysis_result/create', create_analysis_result, name='create_analysis_result'),

@@ -1206,6 +1206,19 @@ def bulk_project_post(request):
     return Response({"attempted": post_ids}, status=status.HTTP_201_CREATED)
 
 
+@api_view(['GET'])
+def project_post_remains(request):
+    project_id = request.query_params.get('project_id')
+    if not project_id:
+        return Response({"detail": "Missing project_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+    linked_post_ids = Project_post.objects.filter(project_id=project_id).values_list('post_id', flat=True)
+    unlinked_posts = Post.objects.exclude(post_id__in=linked_post_ids)
+    # 序列化返回
+    serializer = post_serializer(unlinked_posts, many=True)
+    return Response(serializer.data)
+
+
 @api_view(['GET', 'PUT', 'DELETE'])
 def project_post_detail(request, pk):
     try:
@@ -1241,7 +1254,7 @@ def project_post_all(request):
     qs = (
         Project_post.objects
         .filter(project_id__project_id=project_id)
-        .select_related('post_id','project_id')  # ← 外键字段名本来就叫 post_id
+        .select_related('post_id', 'project_id')  # ← 外键字段名本来就叫 post_id
         .prefetch_related(  # ← 没写 related_name，用默认 *_set
             Prefetch(
                 'analysis_result_set',  # 默认反向名
@@ -1254,24 +1267,24 @@ def project_post_all(request):
         value = [a.value for a in post.analysis_result_set.all()]
         field = [a.field_id.field_name for a in post.analysis_result_set.all()]
         field_id = [a.field_id.field_id for a in post.analysis_result_set.all()]
-      
+
         post_result.append({
-            'project_post_id':post.project_post_id,
-            'project_id':post.project_id.project_id,
-            'post_id':post.post_id.post_id,
+            'project_post_id': post.project_post_id,
+            'project_id': post.project_id.project_id,
+            'post_id': post.post_id.post_id,
             'content': post.post_id.content,
-            'user_id':post.post_id.user_id.user_id,
-            'media_id':post.post_id.media_id.media_id,
+            'user_id': post.post_id.user_id.user_id,
+            'media_id': post.post_id.media_id.media_id,
             'post_time': post.post_id.post_time.strftime("%Y-%m-%d %H:%M:%S"),
             'location_city': post.post_id.location_city,
             'location_state': post.post_id.location_state,
             'location_country': post.post_id.location_country,
-            'likes': post.post_id.likes, 
+            'likes': post.post_id.likes,
             'dislikes': post.post_id.dislikes,
             'has_multimedia': post.post_id.has_multimedia,
-            'analysis':[{'field_id':i, 'field_name':n, 'value':v}
-                        for i,n,v in zip(field_id, field, value)]
-            })
+            'analysis': [{'field_id': i, 'field_name': n, 'value': v}
+                         for i, n, v in zip(field_id, field, value)]
+        })
     return Response(post_result)
 
 
