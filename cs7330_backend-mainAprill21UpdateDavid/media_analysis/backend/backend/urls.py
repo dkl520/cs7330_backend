@@ -22,6 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/query/post/', PostView.as_view()),
     path('api/query/experiment/', ExperimentView.as_view()),
+    path('api/query/advanced/', AdvancedView.as_view()),
 
     # path('api/query/media/create/', social_media_create_view),
     # path('api/query/User/create/', user_create_view),
