@@ -22,44 +22,54 @@ import json
 # Post query
 class PostView(APIView):
     def get(self, request):
-        media = request.GET.get('media')
+        # 参数改成 media_id
+        media_id = request.GET.get('media_id')
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
         username = request.GET.get('username')
         author = request.GET.get('author')
 
-        posts = Post.objects.select_related('user_id', 'media_id').prefetch_related('project_post_set__project_id')
-        # query by media name
-        if media:
-            posts = posts.filter(media_id__name=media)
-        # query by timme slot
+        posts = (
+            Post.objects
+            .select_related('user_id', 'media_id')
+            .prefetch_related('project_post_set__project_id')
+        )
+
+        # ── 1) 按 media_id 过滤 ────────────────────────────────
+        if media_id:  # 可能是 "3" 这样的字符串
+            posts = posts.filter(media_id=media_id)
+
+        # ── 2) 其他条件保持不变 ────────────────────────────────
         if start_date and end_date:
             start_date = datetime.strptime(start_date, "%m/%d/%Y").date()
             end_date = datetime.strptime(end_date, "%m/%d/%Y").date()
             posts = posts.filter(post_time__range=[start_date, end_date])
-        # query by username
+
         if username:
             posts = posts.filter(user_id__username=username)
-        # query by author's first name, last name, or full name
+
         if author:
-            posts = posts.annotate(fullname=Concat('user_id__first_name', Value(' '), 'user_id__last_name')).filter(
+            posts = posts.annotate(
+                fullname=Concat('user_id__first_name', Value(' '), 'user_id__last_name')
+            ).filter(
                 Q(user_id__first_name__icontains=author) |
                 Q(user_id__last_name__icontains=author) |
                 Q(fullname__icontains=author)
             )
 
+        # ── 3) 组装返回数据 ──────────────────────────────────
         result = []
         for post in posts:
-            experiments = [p.project_id.name for p in post.project_post_set.all()]
+            experiments = [pp.project_id.name for pp in post.project_post_set.all()]
             result.append({
                 'content': post.content,
-                'media': post.media_id.name,
+                'media': post.media_id.name,  # 仍然返回平台名称，更友好
+                'media_id': post.media_id_id,  # 如需同时返回 id，可加这一行
                 'username': post.user_id.username,
                 'time': post.post_time.strftime("%Y-%m-%d %H:%M"),
                 'experiments': tuple(experiments),
             })
         return Response(result)
-
 
 # experiment query
 class ExperimentView(APIView):
