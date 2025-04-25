@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import transaction, connection
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
@@ -12,11 +12,15 @@ from .models import *  # Post, Project_post, Social_media
 from .forms import Social_media_Form, User_Form, Post_Form, Repost_Form, Institute_Form, Project_Form, \
     Project_field_Form, Project_post_Form, Analysis_result_Form
 from datetime import datetime
+from .models import Project_post
 from collections import defaultdict
 from django.shortcuts import (get_object_or_404,
                               render,
                               HttpResponseRedirect)
 import json
+# views.py
+
+from rest_framework import status
 
 
 # Post query
@@ -123,110 +127,208 @@ class ExperimentView(APIView):
 
 
 # for 7330 student
-from collections import defaultdict
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 
-from .models import Project_post
+
+# class AdvancedView(APIView):
+#     def get(self, request):
+#         post_id_param = request.GET.get('post_id')
+#
+#         # ✅ 参数校验
+#         if not post_id_param:
+#             return Response({'error': 'post_id 参数不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+#
+#         try:
+#             post_id_list = post_id_param.split(',')
+#         except Exception:
+#             return Response({'error': 'post_id 参数格式错误，应为逗号分隔的整数列表'},
+#                             status=status.HTTP_400_BAD_REQUEST)
+#
+#         # ✅ 获取所有包含这些 post_id 的 Project_post 对象
+#         posts = (Project_post.objects
+#                  .select_related('post_id', 'project_id')
+#                  .prefetch_related('analysis_result_set__field_id')
+#                  .filter(post_id__post_id__in=post_id_list))
+#
+#         project_name_set = set()  # 用于去重
+#         project_result = []
+#
+#         for project_post in posts:
+#             project = project_post.project_id
+#             if project.name in project_name_set:
+#                 continue  # 已处理该项目，跳过
+#
+#             project_name_set.add(project.name)
+#             qs = posts.filter(project_id=project)
+#
+#             fields = []
+#             field_result = []
+#             field_dict = {}
+#
+#             for post in qs:
+#                 analysis_set = post.analysis_result_set.all()
+#                 if not analysis_set:
+#                     continue  # 没有分析结果，跳过该 post
+#
+#                 value = [a.value for a in analysis_set]
+#                 field = [a.field_id.field_name for a in analysis_set]
+#                 field_id = [a.field_id.field_id for a in analysis_set]
+#
+#                 if not field_id:
+#                     continue  # 空字段，继续
+#
+#                 field_result.extend(field)
+#                 for fid, fn, v in zip(field_id, field, value):
+#                         field_dict[fid] = fn
+#                         fields.append({
+#                             'post_id': post.post_id.post_id,
+#                             'field_id': fid,
+#                             'value': v,
+#                         })
+#
+#             # ✅ 字段统计百分比
+#             counter = {}
+#             for f in field_result:
+#                 counter[f] = counter.get(f, 0) + 1
+#             total = len(Project_post.objects.filter(project_id = project.project_id))
+#             if total == 0:
+#                 continue  # 避免除以 0
+#
+#             percentages = {k: round((v / total) * 100, 2) for k, v in counter.items()}
+#
+#             # ✅ 分组结果
+#             grouped = defaultdict(list)
+#             for item in fields:
+#                 fid_list = item['field_id']
+#                 val_list = item['value']
+#                 if not fid_list or not val_list:
+#                     continue
+#                 grouped[fid_list].append({
+#                     'post_id': item['post_id'],
+#                     'value': val_list
+#                 })
+#
+#             formatted_fields = []
+#             for fid, record in grouped.items():
+#                 field_name = field_dict.get(fid, '未知字段')
+#                 percentage = percentages.get(field_name, 0)
+#                 formatted_fields.append({
+#                     'field_id': fid,
+#                     'field_name': field_name,
+#                     'percentage': percentage,
+#                     'result': record
+#                 })
+#
+#             project_result.append({
+#                 'project_id': project.project_id,
+#                 'project_name': project.name,
+#                 'fields': formatted_fields,
+#             })
+#
+#         return Response(project_result)
 
 
 class AdvancedView(APIView):
     def get(self, request):
-        post_id_param = request.GET.get('post_id')
-
-        # ✅ 参数校验
+        # 1. 取并校验参数
+        post_id_param = request.GET.get("post_id")
         if not post_id_param:
-            return Response({'error': 'post_id 参数不能为空'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response(
+                {"error": "post_id 参数不能为空"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
-            post_id_list = post_id_param.split(',')
-        except Exception:
-            return Response({'error': 'post_id 参数格式错误，应为逗号分隔的整数列表'},
-                            status=status.HTTP_400_BAD_REQUEST)
+            post_id = int(post_id_param)
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "post_id 必须是整数"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        # ✅ 获取所有包含这些 post_id 的 Project_post 对象
-        posts = (Project_post.objects
-                 .select_related('post_id', 'project_id')
-                 .prefetch_related('analysis_result_set__field_id')
-                 .filter(post_id__post_id__in=post_id_list))
-
-        project_name_set = set()  # 用于去重
-        project_result = []
-
-        for project_post in posts:
-            project = project_post.project_id
-            if project.name in project_name_set:
-                continue  # 已处理该项目，跳过
-
-            project_name_set.add(project.name)
-            qs = posts.filter(project_id=project)
-
-            fields = []
-            field_result = []
-            field_dict = {}
-
-            for post in qs:
-                analysis_set = post.analysis_result_set.all()
-                if not analysis_set:
-                    continue  # 没有分析结果，跳过该 post
-
-                value = [a.value for a in analysis_set]
-                field = [a.field_id.field_name for a in analysis_set]
-                field_id = [a.field_id.field_id for a in analysis_set]
-
-                if not field_id:
-                    continue  # 空字段，继续
-
-                field_result.extend(field)
-                for fid, fn, v in zip(field_id, field, value):
-                        field_dict[fid] = fn
-                        fields.append({
-                            'post_id': post.post_id.post_id,
-                            'field_id': fid,
-                            'value': v,
-                        })
-
-            # ✅ 字段统计百分比
-            counter = {}
-            for f in field_result:
-                counter[f] = counter.get(f, 0) + 1
-            total = len(Project_post.objects.filter(project_id = project.project_id))
-            if total == 0:
-                continue  # 避免除以 0
-
-            percentages = {k: round((v / total) * 100, 2) for k, v in counter.items()}
-
-            # ✅ 分组结果
-            grouped = defaultdict(list)
-            for item in fields:
-                fid_list = item['field_id']
-                val_list = item['value']
-                if not fid_list or not val_list:
-                    continue
-                grouped[fid_list].append({
-                    'post_id': item['post_id'],
-                    'value': val_list
-                })
-
-            formatted_fields = []
-            for fid, record in grouped.items():
-                field_name = field_dict.get(fid, '未知字段')
-                percentage = percentages.get(field_name, 0)
-                formatted_fields.append({
-                    'field_id': fid,
-                    'field_name': field_name,
-                    'percentage': percentage,
-                    'result': record
-                })
-
-            project_result.append({
-                'project_id': project.project_id,
-                'project_name': project.name,
-                'fields': formatted_fields,
-            })
-        
-        return Response(project_result)
+        # 2. SQL —— 把 ORDER BY 全部去掉
+        query = """
+        WITH target_projects AS (
+            SELECT DISTINCT project_id
+            FROM   project_post
+            WHERE  post_id = %s
+        ),
+        post_counts AS (
+            SELECT  project_id,
+                    COUNT(*) AS total_posts
+            FROM    project_post
+            WHERE   project_id IN (SELECT project_id FROM target_projects)
+            GROUP BY project_id
+        ),
+        field_results AS (
+            SELECT  pf.project_id,
+                    pf.field_id,
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT('post_id', pp.post_id,
+                                    'value',   ar.value)
+                    )                       AS results_json    -- 无排序
+            FROM        project_field   AS pf
+            JOIN        project_post    AS pp  ON pp.project_id = pf.project_id
+            JOIN        analysis_result AS ar
+                   ON   ar.project_post_id = pp.project_post_id
+                  AND  ar.field_id        = pf.field_id
+            WHERE pf.project_id IN (SELECT project_id FROM target_projects)
+              AND ar.value IS NOT NULL
+            GROUP BY pf.project_id, pf.field_id
+        ),
+        field_stats AS (
+            SELECT  pf.project_id,
+                    pf.field_id,
+                    pf.field_name,
+                    COUNT(DISTINCT
+                          CASE WHEN ar.value IS NOT NULL
+                               THEN pp.project_post_id END) AS filled_posts
+            FROM        project_field   AS pf
+            JOIN        project_post    AS pp ON pp.project_id = pf.project_id
+            LEFT JOIN   analysis_result AS ar
+                   ON   ar.project_post_id = pp.project_post_id
+                  AND  ar.field_id        = pf.field_id
+            WHERE pf.project_id IN (SELECT project_id FROM target_projects)
+            GROUP BY pf.project_id, pf.field_id, pf.field_name
+        ),
+        field_stats_pct AS (
+            SELECT  fs.project_id,
+                    fs.field_id,
+                    fs.field_name,
+                    ROUND(100.0 * fs.filled_posts / pc.total_posts, 2) AS percentage,
+                    COALESCE(fr.results_json, JSON_ARRAY())            AS results_json
+            FROM    field_stats fs
+            JOIN    post_counts pc  USING (project_id)
+            LEFT JOIN field_results fr USING (project_id, field_id)
+        )
+        SELECT
+            p.project_id,
+            p.name AS project_name,
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'field_id',    f.field_id,
+                    'field_name',  f.field_name,
+                    'percentage',  f.percentage,
+                    'result',      f.results_json
+                )
+            ) AS fields                                   -- 无排序
+        FROM        project         AS p
+        JOIN        field_stats_pct AS f  ON f.project_id = p.project_id
+        WHERE       p.project_id IN (SELECT project_id FROM target_projects)
+        GROUP BY    p.project_id, p.name;
+        """
+        # 3. 执行
+        with connection.cursor() as cursor:
+            cursor.execute(query, [post_id])
+            rows = cursor.fetchall()
+        # 4. 解析 JSON
+        data = [
+            {
+                "project_id": pid,
+                "project_name": pname,
+                "fields": json.loads(fields_json),
+            }
+            for pid, pname, fields_json in rows
+        ]
+        return Response(data, status=status.HTTP_200_OK)
 
 
 # #--------
