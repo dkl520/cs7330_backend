@@ -226,100 +226,99 @@ class ExperimentView(APIView):
 #
 #         return Response(project_result)
 
-
+# views.py
+#cs7330 only
+# 可以接收多个参数
 class AdvancedView(APIView):
     def get(self, request):
-        # 1. 取并校验参数
-        post_id_param = request.GET.get("post_id")
-        if not post_id_param:
-            return Response(
-                {"error": "post_id 参数不能为空"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        raw = request.GET.get("post_id")  # ① 允许 “6,7,8”
+        if not raw:
+            return Response({"error": "post_id 不能为空"}, status=400)
         try:
-            post_id = int(post_id_param)
-        except (TypeError, ValueError):
-            return Response(
-                {"error": "post_id 必须是整数"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            post_ids = [int(x) for x in raw.split(",") if x.strip()]
+        except ValueError:
+            return Response({"error": "post_id 必须是逗号分隔整数"}, status=400)
 
-        # 2. SQL —— 把 ORDER BY 全部去掉
-        query = """
-        WITH target_projects AS (
-            SELECT DISTINCT project_id
-            FROM   project_post
-            WHERE  post_id = %s
-        ),
-        post_counts AS (
-            SELECT  project_id,
-                    COUNT(*) AS total_posts
-            FROM    project_post
-            WHERE   project_id IN (SELECT project_id FROM target_projects)
-            GROUP BY project_id
-        ),
-        field_results AS (
-            SELECT  pf.project_id,
-                    pf.field_id,
-                    JSON_ARRAYAGG(
-                        JSON_OBJECT('post_id', pp.post_id,
-                                    'value',   ar.value)
-                    )                       AS results_json    -- 无排序
-            FROM        project_field   AS pf
-            JOIN        project_post    AS pp  ON pp.project_id = pf.project_id
-            JOIN        analysis_result AS ar
-                   ON   ar.project_post_id = pp.project_post_id
-                  AND  ar.field_id        = pf.field_id
-            WHERE pf.project_id IN (SELECT project_id FROM target_projects)
-              AND ar.value IS NOT NULL
-            GROUP BY pf.project_id, pf.field_id
-        ),
-        field_stats AS (
-            SELECT  pf.project_id,
-                    pf.field_id,
-                    pf.field_name,
-                    COUNT(DISTINCT
-                          CASE WHEN ar.value IS NOT NULL
-                               THEN pp.project_post_id END) AS filled_posts
-            FROM        project_field   AS pf
-            JOIN        project_post    AS pp ON pp.project_id = pf.project_id
-            LEFT JOIN   analysis_result AS ar
-                   ON   ar.project_post_id = pp.project_post_id
-                  AND  ar.field_id        = pf.field_id
-            WHERE pf.project_id IN (SELECT project_id FROM target_projects)
-            GROUP BY pf.project_id, pf.field_id, pf.field_name
-        ),
-        field_stats_pct AS (
-            SELECT  fs.project_id,
-                    fs.field_id,
-                    fs.field_name,
-                    ROUND(100.0 * fs.filled_posts / pc.total_posts, 2) AS percentage,
-                    COALESCE(fr.results_json, JSON_ARRAY())            AS results_json
-            FROM    field_stats fs
-            JOIN    post_counts pc  USING (project_id)
-            LEFT JOIN field_results fr USING (project_id, field_id)
-        )
-        SELECT
-            p.project_id,
-            p.name AS project_name,
-            JSON_ARRAYAGG(
-                JSON_OBJECT(
-                    'field_id',    f.field_id,
-                    'field_name',  f.field_name,
-                    'percentage',  f.percentage,
-                    'result',      f.results_json
-                )
-            ) AS fields                                   -- 无排序
-        FROM        project         AS p
-        JOIN        field_stats_pct AS f  ON f.project_id = p.project_id
-        WHERE       p.project_id IN (SELECT project_id FROM target_projects)
-        GROUP BY    p.project_id, p.name;
+        if not post_ids:
+            return Response({"error": "post_id 列表为空"}, status=400)
+
+        # ② 生成 “%s,%s,%s …” 并将其注入到 SQL
+        placeholders = ",".join(["%s"] * len(post_ids))
+
+        query = f"""
+            WITH target_projects AS (SELECT DISTINCT project_id
+                         FROM project_post
+                         WHERE post_id IN ({placeholders})),
+                    post_counts AS (SELECT project_id,
+                            COUNT(*) AS total_posts
+                     FROM project_post
+                     WHERE project_id IN (SELECT project_id FROM target_projects)
+                     GROUP BY project_id),
+
+/* 3️⃣  只统计 value 不为 NULL 的 (post_id,value) 列表，供最后输出 */
+             field_results AS (SELECT pf.project_id,
+                                      pf.field_id,
+                                      JSON_ARRAYAGG(
+                                              JSON_OBJECT('post_id', pp.post_id,
+                                                          'value', ar.value)
+                                          ) AS results_json -- 全是非 NULL 的 value
+                               FROM project_field AS pf
+                                        JOIN project_post AS pp ON pp.project_id = pf.project_id
+                                        JOIN analysis_result AS ar
+                                             ON ar.project_post_id = pp.project_post_id
+                                                 AND ar.field_id = pf.field_id
+                               WHERE pf.project_id IN (SELECT project_id FROM target_projects)
+                                 AND ar.value IS NOT NULL
+                               GROUP BY pf.project_id, pf.field_id),
+        
+        /* 4️⃣  计算每个字段在该项目中 “被填写（value 非 NULL）” 的帖子数量 */
+             field_stats AS (SELECT pf.project_id,
+                                    pf.field_id,
+                                    pf.field_name,
+                                    COUNT(DISTINCT -- 只数 value 非 NULL 的帖子
+                                          CASE
+                                              WHEN ar.value IS NOT NULL
+                                                  THEN pp.project_post_id
+                                              END) AS filled_posts
+                             FROM project_field AS pf
+                                      JOIN project_post AS pp ON pp.project_id = pf.project_id
+                                      LEFT JOIN analysis_result AS ar
+                                                ON ar.project_post_id = pp.project_post_id
+                                                    AND ar.field_id = pf.field_id
+                             WHERE pf.project_id IN (SELECT project_id FROM target_projects)
+                             GROUP BY pf.project_id, pf.field_id, pf.field_name),
+        
+        /* 5️⃣  加上百分比，并把 result 数组（可能为空）拼进来 */
+             field_stats_pct AS (SELECT fs.project_id,
+                                        fs.field_id,
+                                        fs.field_name,
+                                        ROUND(100.0 * fs.filled_posts / pc.total_posts, 2) AS percentage,
+                                        COALESCE(fr.results_json, JSON_ARRAY())            AS results_json
+                                 FROM field_stats fs
+                                          JOIN post_counts pc USING (project_id)
+                                          LEFT JOIN field_results fr USING (project_id, field_id))
+            /* 6️⃣  最终按项目打包成你要的 JSON 结构 */
+            SELECT p.project_id,
+                   p.name AS project_name,
+                   JSON_ARRAYAGG(
+                           JSON_OBJECT(
+                                   'field_id', f.field_id,
+                                   'field_name', f.field_name,
+                                   'percentage', f.percentage,
+                                   'result', f.results_json -- 已过滤掉 value = NULL
+                               )
+                       )  AS fields
+            FROM project AS p
+                     JOIN field_stats_pct AS f ON f.project_id = p.project_id
+            WHERE p.project_id IN (SELECT project_id FROM target_projects)
+            GROUP BY p.project_id, p.name;
         """
-        # 3. 执行
-        with connection.cursor() as cursor:
-            cursor.execute(query, [post_id])
-            rows = cursor.fetchall()
-        # 4. 解析 JSON
+
+        with connection.cursor() as cur:
+            # ③ 把列表作为 *参数序列* 传给 cursor.execute
+            cur.execute(query, post_ids)
+            rows = cur.fetchall()
+
         data = [
             {
                 "project_id": pid,
@@ -328,7 +327,111 @@ class AdvancedView(APIView):
             }
             for pid, pname, fields_json in rows
         ]
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(data, status=200)
+
+# 接收单个参数 post_id 查询
+# class AdvancedView(APIView):
+#     def get(self, request):
+#         # 1. 取并校验参数
+#         post_id_param = request.GET.get("post_id")
+#         if not post_id_param:
+#             return Response(
+#                 {"error": "post_id 参数不能为空"},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
+#         try:
+#             post_id = int(post_id_param)
+#         except (TypeError, ValueError):
+#             return Response(
+#                 {"error": "post_id 必须是整数"},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
+#
+#         # 2. SQL —— 把 ORDER BY 全部去掉
+#         query = """
+#         WITH target_projects AS (
+#             SELECT DISTINCT project_id
+#             FROM   project_post
+#             WHERE  post_id = %s
+#         ),
+#         post_counts AS (
+#             SELECT  project_id,
+#                     COUNT(*) AS total_posts
+#             FROM    project_post
+#             WHERE   project_id IN (SELECT project_id FROM target_projects)
+#             GROUP BY project_id
+#         ),
+#         field_results AS (
+#             SELECT  pf.project_id,
+#                     pf.field_id,
+#                     JSON_ARRAYAGG(
+#                         JSON_OBJECT('post_id', pp.post_id,
+#                                     'value',   ar.value)
+#                     )                       AS results_json    -- 无排序
+#             FROM        project_field   AS pf
+#             JOIN        project_post    AS pp  ON pp.project_id = pf.project_id
+#             JOIN        analysis_result AS ar
+#                    ON   ar.project_post_id = pp.project_post_id
+#                   AND  ar.field_id        = pf.field_id
+#             WHERE pf.project_id IN (SELECT project_id FROM target_projects)
+#               AND ar.value IS NOT NULL
+#             GROUP BY pf.project_id, pf.field_id
+#         ),
+#         field_stats AS (
+#             SELECT  pf.project_id,
+#                     pf.field_id,
+#                     pf.field_name,
+#                     COUNT(DISTINCT
+#                           CASE WHEN ar.value IS NOT NULL
+#                                THEN pp.project_post_id END) AS filled_posts
+#             FROM        project_field   AS pf
+#             JOIN        project_post    AS pp ON pp.project_id = pf.project_id
+#             LEFT JOIN   analysis_result AS ar
+#                    ON   ar.project_post_id = pp.project_post_id
+#                   AND  ar.field_id        = pf.field_id
+#             WHERE pf.project_id IN (SELECT project_id FROM target_projects)
+#             GROUP BY pf.project_id, pf.field_id, pf.field_name
+#         ),
+#         field_stats_pct AS (
+#             SELECT  fs.project_id,
+#                     fs.field_id,
+#                     fs.field_name,
+#                     ROUND(100.0 * fs.filled_posts / pc.total_posts, 2) AS percentage,
+#                     COALESCE(fr.results_json, JSON_ARRAY())            AS results_json
+#             FROM    field_stats fs
+#             JOIN    post_counts pc  USING (project_id)
+#             LEFT JOIN field_results fr USING (project_id, field_id)
+#         )
+#         SELECT
+#             p.project_id,
+#             p.name AS project_name,
+#             JSON_ARRAYAGG(
+#                 JSON_OBJECT(
+#                     'field_id',    f.field_id,
+#                     'field_name',  f.field_name,
+#                     'percentage',  f.percentage,
+#                     'result',      f.results_json
+#                 )
+#             ) AS fields                                   -- 无排序
+#         FROM        project         AS p
+#         JOIN        field_stats_pct AS f  ON f.project_id = p.project_id
+#         WHERE       p.project_id IN (SELECT project_id FROM target_projects)
+#         GROUP BY    p.project_id, p.name;
+#         """
+#         # 3. 执行
+#         with connection.cursor() as cursor:
+#             cursor.execute(query, [post_id])
+#             rows = cursor.fetchall()
+#         # 4. 解析 JSON
+#         data = [
+#             {
+#                 "project_id": pid,
+#                 "project_name": pname,
+#                 "fields": json.loads(fields_json),
+#             }
+#             for pid, pname, fields_json in rows
+#         ]
+#         return Response(data, status=status.HTTP_200_OK)
 
 
 # #--------
