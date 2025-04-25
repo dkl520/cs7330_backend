@@ -178,13 +178,14 @@ class AdvancedView(APIView):
                 if not field_id:
                     continue  # 空字段，继续
 
-                field_dict[field_id[0]] = field[0]
                 field_result.extend(field)
-                fields.append({
-                    'post_id': post.post_id.post_id,
-                    'field_id': field_id,
-                    'value': value,
-                })
+                for fid, fn, v in zip(field_id, field, value):
+                        field_dict[fid] = fn
+                        fields.append({
+                            'post_id': post.post_id.post_id,
+                            'field_id': fid,
+                            'value': v,
+                        })
 
             # ✅ 字段统计百分比
             counter = {}
@@ -203,9 +204,9 @@ class AdvancedView(APIView):
                 val_list = item['value']
                 if not fid_list or not val_list:
                     continue
-                grouped[fid_list[0]].append({
+                grouped[fid_list].append({
                     'post_id': item['post_id'],
-                    'value': val_list[0]
+                    'value': val_list
                 })
 
             formatted_fields = []
@@ -224,7 +225,7 @@ class AdvancedView(APIView):
                 'project_name': project.name,
                 'fields': formatted_fields,
             })
-
+        
         return Response(project_result)
 
 
