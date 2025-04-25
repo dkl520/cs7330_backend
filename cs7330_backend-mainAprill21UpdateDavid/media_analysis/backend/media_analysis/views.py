@@ -189,7 +189,7 @@ class AdvancedView(APIView):
 
             # ✅ 字段统计百分比
             counter = {}
-            for f in field_result:
+            for f in set(field_result):
                 counter[f] = len(Analysis_result.objects.filter(
                     Q(project_post_id__project_id = project.project_id) &
                     Q(field_id__field_name = f)))
