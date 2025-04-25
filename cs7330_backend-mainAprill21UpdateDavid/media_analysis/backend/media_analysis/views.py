@@ -12,6 +12,7 @@ from .models import *  # Post, Project_post, Social_media
 from .forms import Social_media_Form, User_Form, Post_Form, Repost_Form, Institute_Form, Project_Form, \
     Project_field_Form, Project_post_Form, Analysis_result_Form
 from datetime import datetime
+from collections import defaultdict
 from django.shortcuts import (get_object_or_404,
                               render,
                               HttpResponseRedirect)
@@ -107,8 +108,67 @@ class ExperimentView(APIView):
             'percentages': percentages,
         }
         return Response(result)
+# for 7330 student
+class AdvancedView(APIView):
+    def get(self, request):
+        post_id = request.GET.get('post_id').split(',')
 
+        # query by a list of post_id = 1, 2, 3 ...
+        posts = (Project_post.objects
+                 .select_related('post_id', 'project_id')
+                 .prefetch_related('analysis_result_set__field_id')
+                 .filter(post_id__in = post_id))
+        
+        # then experiment query
+        project_name =[]        #for getting distinct results
+        project_result = []
+        # query by each project name
+        for project in posts:
+            if project.project_id.name not in project_name:
+                qs = posts.filter(project_id__name = project.project_id.name)
+                fields =[]
+                field_result = []
+                field_dict = {}
+                # list posts the project contains
+                for post in qs:
+                    value = [a.value for a in post.analysis_result_set.all()]
+                    field = [a.field_id.field_name for a in post.analysis_result_set.all()]
+                    field_id = [a.field_id.field_id for a in post.analysis_result_set.all()]
+                    field_dict[field_id[0]] = field[0]
+                    field_result += field
+                    fields.append({
+                        'post_id':post.post_id.post_id,
+                        'field_id': field_id,
+                        'value': value, 
+                    })
+                # recording project name we already queried 
+                project_name.append(project.project_id.name)
+                # count for field percentage
+                counter = {}
+                for f in field_result:
+                    counter[f] = counter.get(f, 0) + 1
+                total = len(posts)
+                percentages = {k: round((v / total) * 100, 2) for k, v in counter.items()}
+                # form required data
+                grouped = defaultdict(list)    # grouped by field_id
+                for item in fields:
+                    field_id = item['field_id'][0]
+                    grouped[field_id].append({
+                        'post_id': item['post_id'],
+                        'value': item['value'][0],
+                    })
+                
+                fields = [{'field_id': field_id, 'field_name':field_dict[field_id], 
+                           'percentage':percentages[field_dict[field_id]],'result':record} 
+                           for field_id, record in grouped.items()]
 
+                project_result.append({
+                    'project_id': project.project_id.project_id,
+                    'project_name': project.project_id.name,
+                    'fields': fields,
+                })
+       
+        return(Response(project_result))
 # #--------
 # #social media crud
 
