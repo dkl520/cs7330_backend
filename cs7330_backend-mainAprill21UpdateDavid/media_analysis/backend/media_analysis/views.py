@@ -191,7 +191,7 @@ class AdvancedView(APIView):
             counter = {}
             for f in field_result:
                 counter[f] = counter.get(f, 0) + 1
-            total = len(qs)
+            total = len(Project_post.objects.filter(project_id = project.project_id))
             if total == 0:
                 continue  # 避免除以 0
 
